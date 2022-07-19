@@ -1,6 +1,5 @@
 # jpa_shop
 ### 2022.03.28 완료
-
 springboot 및 JPA를 활용한 java 웹 애플리케이션을 개발
 
 
