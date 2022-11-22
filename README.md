@@ -2,6 +2,7 @@
 ### 2022.03.28 완료
 springboot 및 JPA를 활용한 java 웹 애플리케이션을 개발
 
+collection of picture 예시 사진 모음 폴더
 
 ### 요구사항 분석
 * 도메인과 테이블 설계<br>
