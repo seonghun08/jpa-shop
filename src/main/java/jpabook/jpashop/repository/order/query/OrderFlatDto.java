@@ -3,7 +3,6 @@ package jpabook.jpashop.repository.order.query;
 import jpabook.jpashop.domain.Address;
 import jpabook.jpashop.domain.OrderStatus;
 import lombok.Data;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 
@@ -12,7 +11,7 @@ public class OrderFlatDto {
 
     private Long orderId;
     private String name;
-    private LocalDateTime orderData;
+    private LocalDateTime orderDate;
     private OrderStatus orderStatus;
     private Address address;
 
@@ -20,14 +19,10 @@ public class OrderFlatDto {
     private int orderPrice;
     private int count;
 
-    public OrderFlatDto(
-            Long orderId, String name, LocalDateTime orderData,
-            OrderStatus orderStatus, Address address, String itemName,
-            int orderPrice, int count) {
-
+    public OrderFlatDto(Long orderId, String name, LocalDateTime orderDate, OrderStatus orderStatus, Address address, String itemName, int orderPrice, int count) {
         this.orderId = orderId;
         this.name = name;
-        this.orderData = orderData;
+        this.orderDate = orderDate;
         this.orderStatus = orderStatus;
         this.address = address;
         this.itemName = itemName;

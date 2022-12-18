@@ -1,12 +1,14 @@
 package jpabook.jpashop.service;
 
-
-import jpabook.jpashop.domain.*;
+import jpabook.jpashop.domain.Delivery;
+import jpabook.jpashop.domain.Member;
+import jpabook.jpashop.domain.Order;
+import jpabook.jpashop.domain.OrderItem;
 import jpabook.jpashop.domain.item.Item;
 import jpabook.jpashop.repository.ItemRepository;
 import jpabook.jpashop.repository.MemberRepository;
-import jpabook.jpashop.repository.OrderRepository;
-import jpabook.jpashop.repository.OrderSearch;
+import jpabook.jpashop.repository.order.OrderRepository;
+import jpabook.jpashop.repository.order.OrderSearch;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,62 +30,37 @@ public class OrderService {
     @Transactional
     public Long order(Long memberId, Long itemId, int count) {
 
-        // Entity 조회
-        Member member = memberRepository.findOne(memberId);
-        Item item = itemRepository.findOne(itemId);
+        // 엔티티 조회
+        Member member = memberRepository.findById(memberId).orElseThrow();
+        Item item = itemRepository.findById(itemId).orElseThrow();
 
-        // 배송정보 생성
-        Delivery delivery = new Delivery();
-        delivery.setAddress(member.getAddress());
-        delivery.setStatus(DeliveryStatus.READY);
+        // 배송정보 생성성
+        Delivery delivery = new Delivery(member.getAddress());
 
-        // 주문상품 생성
+        // 주문삼품 생성
         OrderItem orderItem = OrderItem.createOrderItem(item, item.getPrice(), count);
 
         // 주문 생성
         Order order = Order.createOrder(member, delivery, orderItem);
-
-        // 주문 저장
         orderRepository.save(order);
+
         return order.getId();
     }
 
     /**
-     * 취소
+     * 주문 취소
      */
     @Transactional
     public void cancelOrder(Long orderId) {
-        
-        // 주문 Entity 조회
-        Order order = orderRepository.findOne(orderId);
-        
-        // 주문 취소
+        Order order = orderRepository.findById(orderId).orElseThrow();
         order.cancel();
     }
 
-
     /**
-     * 검색
+     * 주문 검색
      */
-    public List<Order> findOrders(OrderSearch orderSearch) {
-        return orderRepository.findAllByString(orderSearch);
+    public List<Order> findOrders(OrderSearch search) {
+        return orderRepository.findAllByString(search);
     }
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

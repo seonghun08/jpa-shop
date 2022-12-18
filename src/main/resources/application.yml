@@ -10,10 +10,14 @@ spring:
       ddl-auto: create
     properties:
       hibernate:
-#        show_sql: true
+        #        show_sql: true
         format_sql: true
         default_batch_fetch_size: 100
 
+    #    O.S.I.V 영속성 컨텍스트 생존 범위 설정
+    #    false => 트랜젝션 범위 내 영속성 컨텍스트가 생존하기 때문에 트랜젝션 범위 내 LAZY 로딩을 끝내야 한다.
+    open-in-view: true
+
 logging.level:
   org.hibernate.SQL: debug
-  org.hibernate.type: trace
+#  org.hibernate.type: trace

@@ -3,7 +3,7 @@ package jpabook.jpashop.controller;
 import jpabook.jpashop.domain.Member;
 import jpabook.jpashop.domain.Order;
 import jpabook.jpashop.domain.item.Item;
-import jpabook.jpashop.repository.OrderSearch;
+import jpabook.jpashop.repository.order.OrderSearch;
 import jpabook.jpashop.service.ItemService;
 import jpabook.jpashop.service.MemberService;
 import jpabook.jpashop.service.OrderService;
@@ -19,15 +19,13 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final MemberService memberService;
     private final ItemService itemService;
+    private final MemberService memberService;
 
     @GetMapping("/order")
-    public String createForm(Model model) {
-
+    public String orderForm(Model model) {
         List<Member> members = memberService.findMembers();
         List<Item> items = itemService.findItems();
-
         model.addAttribute("members", members);
         model.addAttribute("items", items);
         return "order/orderForm";
@@ -37,17 +35,14 @@ public class OrderController {
     public String order(@RequestParam("memberId") Long memberId,
                         @RequestParam("itemId") Long itemId,
                         @RequestParam("count") int count) {
-
         orderService.order(memberId, itemId, count);
-        return "redirect:/orders";
+        return "redirect:/";
     }
 
     @GetMapping("/orders")
     public String orderList(@ModelAttribute("orderSearch") OrderSearch orderSearch, Model model) {
-
         List<Order> orders = orderService.findOrders(orderSearch);
         model.addAttribute("orders", orders);
-
         return "order/orderList";
     }
 
@@ -56,4 +51,6 @@ public class OrderController {
         orderService.cancelOrder(orderId);
         return "redirect:/orders";
     }
+
+
 }

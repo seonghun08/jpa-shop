@@ -4,21 +4,18 @@ import jpabook.jpashop.domain.Address;
 import jpabook.jpashop.domain.Order;
 import jpabook.jpashop.domain.OrderItem;
 import jpabook.jpashop.domain.OrderStatus;
-import jpabook.jpashop.repository.OrderRepository;
-import jpabook.jpashop.repository.OrderSearch;
+import jpabook.jpashop.repository.order.OrderRepository;
 import jpabook.jpashop.repository.order.query.OrderFlatDto;
 import jpabook.jpashop.repository.order.query.OrderItemQueryDto;
 import jpabook.jpashop.repository.order.query.OrderQueryDto;
 import jpabook.jpashop.repository.order.query.OrderQueryRepository;
-import lombok.AllArgsConstructor;
+import jpabook.jpashop.service.query.OrderQueryService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.security.PublicKey;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,79 +28,80 @@ public class OrderApiController {
 
     private final OrderRepository orderRepository;
     private final OrderQueryRepository orderQueryRepository;
+    private final OrderQueryService orderQueryService;
 
+    // 사용 X
     @GetMapping("/api/v1/orders")
     public List<Order> ordersV1() {
-        List<Order> all = orderRepository.findAllByString(new OrderSearch());
-        for (Order order : all) {
-            order.getMember().getName();
-            order.getDelivery().getAddress();
-            List<OrderItem> orderItems = order.getOrderItems();
-            orderItems.stream().forEach(o -> o.getItem().getName());
-        }
-        return all;
+        return orderRepository.findAll();
     }
 
+    // n + 1 문제
     @GetMapping("/api/v2/orders")
-    public Result ordersV2() {
-        List<Order> orders = orderRepository.findAllByString(new OrderSearch());
+    public List<OrderDto> ordersV2() {
+        List<Order> orders = orderRepository.findAll();
         List<OrderDto> collect = orders.stream()
                 .map(o -> new OrderDto(o))
                 .collect(Collectors.toList());
-        return new Result(collect.size(), collect);
+        return collect;
     }
 
+//    @GetMapping("/api/v3/orders")
+//    public List<OrderDto> ordersV3() {
+//        List<Order> orders = orderRepository.findAllWithItem();
+//        List<OrderDto> collect = orders.stream()
+//                .map(o -> new OrderDto(o))
+//                .collect(Collectors.toList());
+//        return collect;
+//    }
+
+    /**
+     * OSIV이 false 인 경우 별도의 서비스 객체에 트랜젝션을 걸어둔다.
+     */
     @GetMapping("/api/v3/orders")
-    public Result ordersV3() {
-        List<Order> orders = orderRepository.findAllWithItem();
-        List<OrderDto> collect = orders.stream()
-                .map(o -> new OrderDto(o))
-                .collect(Collectors.toList());
-        return new Result(collect.size(), collect);
+    public List<jpabook.jpashop.service.query.OrderDto> ordersV3() {
+        List<jpabook.jpashop.service.query.OrderDto> orderDtos = orderQueryService.ordersV3();
+        return orderDtos;
     }
 
+    // 컬렉션을 페치 조인으로 가져와 페이징 처리를 하지 말고 페치사이즈를 사용하자
+    // 1 + n + m  ==>  페치사이즈로 바꾸면 1 + 1 + 1 가 가능하다.
     @GetMapping("/api/v3.1/orders")
-    public Result ordersV3_page(
-            @RequestParam(value = "offset", defaultValue = "0") int offset,
-            @RequestParam(value = "limit", defaultValue = "100") int limit) {
-
+    public List<OrderDto> ordersV3_page(@RequestParam(value = "offset", defaultValue = "0") int offset,
+                                        @RequestParam(value = "limit", defaultValue = "10") int limit) {
         List<Order> orders = orderRepository.findAllWithMemberDelivery(offset, limit);
         List<OrderDto> collect = orders.stream()
                 .map(o -> new OrderDto(o))
                 .collect(Collectors.toList());
-        return new Result(collect.size(), collect);
+        return collect;
     }
 
+    // XxxToOne 의 경우 join 으로 가져오고 XxxToMany 로 컬렉션을 받는 경우 각 리스트마다 쿼리를 보낸다.
     @GetMapping("/api/v4/orders")
     public List<OrderQueryDto> ordersV4() {
         return orderQueryRepository.findOrderQueryDtos();
     }
 
+    // 성능 최적화
     @GetMapping("/api/v5/orders")
     public List<OrderQueryDto> ordersV5() {
         return orderQueryRepository.findAllByDto_optimization();
     }
 
+    // V5와 완전히 다른 접근 방식
     @GetMapping("/api/v6/orders")
     public List<OrderQueryDto> ordersV6() {
         List<OrderFlatDto> flats = orderQueryRepository.findAllByDto_flat();
         return flats.stream()
-                .collect(groupingBy(o -> new OrderQueryDto(o.getOrderId(),
-                                o.getName(), o.getOrderData(), o.getOrderStatus(), o.getAddress()),
-                        mapping(o -> new OrderItemQueryDto(o.getOrderId(),
-                                o.getItemName(), o.getOrderPrice(), o.getCount()), toList())
-                )).entrySet().stream()
-                .map(e -> new OrderQueryDto(e.getKey().getOrderId(),
-                        e.getKey().getName(), e.getKey().getOrderDate(), e.getKey().getOrderStatus(),
-                        e.getKey().getAddress(), e.getValue()))
-                .collect(toList());
-    }
-
-    @Data
-    @AllArgsConstructor
-    static class Result<T> {
-        private int orderCount;
-        private T Data;
+                // groupingBy 주의점 :: 객체는 무엇을 묶을지 알려줘야 한다.
+                // @EqualsAndHashCode(of = "orderId")를 사용해서 orderId로 groupingBy
+                .collect(groupingBy(o -> new OrderQueryDto(o.getOrderId(), o.getName(), o.getOrderDate(), o.getOrderStatus(), o.getAddress()),
+                        mapping(o -> new OrderItemQueryDto(o.getOrderId(), o.getItemName(), o.getOrderPrice(), o.getCount()), toList())))
+                .entrySet().stream()
+                .map(e -> new OrderQueryDto(
+                        e.getKey().getOrderId(), e.getKey().getName(), e.getKey().getOrderDate(), e.getKey().getOrderStatus(), e.getKey().getAddress(),
+                        e.getValue()))
+                .collect(Collectors.toList());
     }
 
     @Data

@@ -3,51 +3,46 @@ package jpabook.jpashop.service;
 import jpabook.jpashop.domain.Member;
 import jpabook.jpashop.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true) // 조회만 할 경우 최적화를 할 수 있다.
-@RequiredArgsConstructor // final 필드만 생성자를 만들어 준다.
+@Transactional
+@RequiredArgsConstructor
 public class MemberService {
 
     private final MemberRepository memberRepository;
 
-    /**
-     * 회원가입
-     */
-    @Transactional
+    // 회원 가입
     public Long join(Member member) {
         validateDuplicateMember(member);
-        memberRepository.save(member);
-        return member.getId();
+        Member joinMember = memberRepository.save(member);
+        return joinMember.getId();
     }
 
     private void validateDuplicateMember(Member member) {
-        List<Member> findMembers = memberRepository.findByName(member.getName());
-        if (!findMembers.isEmpty()) {
-            throw new IllegalStateException("이미 존재하는 회원입니다.");
+        if (memberRepository.existsByName(member.getName())) {
+            throw new IllegalStateException("이미 존재하는 회원 이름입니다.");
         }
     }
 
     // 회원 전체 조회
+    @Transactional(readOnly = true)
     public List<Member> findMembers() {
         return memberRepository.findAll();
     }
 
     // 회원 조회
-
+    @Transactional(readOnly = true)
     public Member findOne(Long memberId) {
-        return memberRepository.findOne(memberId);
+        return memberRepository.findById(memberId).orElseThrow();
     }
 
     @Transactional
     public void update(Long id, String name) {
-
-        Member member = memberRepository.findOne(id);
-        member.setName(name);
+        Member member = memberRepository.findById(id).orElseThrow();
+        member.changeName(name);
     }
 }
